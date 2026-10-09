@@ -971,7 +971,7 @@ button { font: inherit; }
     setAuthNotice('Sending link…');
     sb.auth.signInWithOtp({
       email: email,
-      options: { emailRedirectTo: window.location.origin, shouldCreateUser: false }
+      options: { emailRedirectTo: window.location.origin + window.location.pathname, shouldCreateUser: false }
     }).then(function (res) {
       setAuthBusy(false);
       if (res.error) { setAuthNotice(friendlyAuthError(res.error), 'error'); return; }
