@@ -2,6 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>
+// Keep the branded Nova login on HTTPS even when the host's redirect setting is unavailable.
+if (window.location.hostname === 'chat.smplyai.com' && window.location.protocol === 'http:') {
+  window.location.replace('https://chat.smplyai.com' + window.location.pathname + window.location.search + window.location.hash);
+}
+</script>
+
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#03050d">
