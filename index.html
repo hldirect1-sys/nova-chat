@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#03050d">
 <meta name="referrer" content="strict-origin-when-cross-origin">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://cwlktrvvappvwdmhefxo.supabase.co https://*.bstatic.com https://*.googleusercontent.com https://*.gstatic.com https://*.ggpht.com; connect-src https://cwlktrvvappvwdmhefxo.supabase.co wss://cwlktrvvappvwdmhefxo.supabase.co; base-uri 'none'; form-action 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://cwlktrvvappvwdmhefxo.supabase.co https://*.bstatic.com https://*.googleusercontent.com https://*.gstatic.com https://*.ggpht.com https://*.vrbo.com https://*.trvl-media.com https://*.expedia.com; connect-src https://cwlktrvvappvwdmhefxo.supabase.co wss://cwlktrvvappvwdmhefxo.supabase.co; base-uri 'none'; form-action 'self'; object-src 'none'">
 <title>Nova</title>
 <meta name="description" content="Nova, your personal AI assistant.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f1424'/%3E%3Cg fill='none' stroke='%23ff4f9a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' transform='translate(4 4)'%3E%3Cpath d='M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z'/%3E%3Cpath d='M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z'/%3E%3Cpath d='M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4'/%3E%3C/g%3E%3C/svg%3E">
@@ -585,7 +585,7 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
     return [url, trail];
   }
   // Hotel and place photos from Google/Booking image hosts also show inline.
-  var PHOTO_RE = /^https:\/\/[a-z0-9.-]+\.(?:bstatic\.com|googleusercontent\.com|gstatic\.com|ggpht\.com)\/[^\s<>"]+$/i;
+  var PHOTO_RE = /^https:\/\/[a-z0-9.-]+\.(?:bstatic\.com|googleusercontent\.com|gstatic\.com|ggpht\.com|vrbo\.com|trvl-media\.com|expedia\.com)\/[^\s<>"]+$/i;
   var GEN_IMG_RE = /^https:\/\/cwlktrvvappvwdmhefxo\.supabase\.co\/storage\/v1\/object\/sign\/nova-generated-images\/[^\s?]+\.(?:png|jpe?g|webp)\?token=[A-Za-z0-9._-]+$/;
   function inline(s) {
     var re = /\[([^\]\n]{1,300})\]\((https?:\/\/[^\s()<>]+)\)|(https?:\/\/[^\s<>"]+)|\*\*([^*\n]+?)\*\*/g;
