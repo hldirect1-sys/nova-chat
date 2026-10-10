@@ -181,6 +181,11 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
 .msg-user .bubble { background: var(--user-bubble); color: var(--user-text); border-bottom-right-radius: 6px; white-space: pre-wrap; font-weight: 500; }
 .msg-nova .bubble { background: var(--panel); border: 1px solid var(--border); color: var(--body); border-top-left-radius: 6px; }
 .rich p { margin: 0 0 .7em; }
+.search-sources { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.search-label { color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.search-sources ul { margin: 0; padding-left: 1.2em; font-size: 13px; }
+.search-sources li + li { margin-top: 6px; }
+.search-note { margin-top: 12px !important; color: var(--muted); font-size: 12px; }
 .rich p:last-child, .rich ul:last-child, .rich ol:last-child { margin-bottom: 0; }
 .rich ul, .rich ol { margin: 0 0 .7em; padding-left: 1.3em; }
 .rich li { margin: .2em 0; }
@@ -704,12 +709,37 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
     return row;
   }
 
-  function addNovaMessage(text) {
+  function normalizeSearch(search, status) {
+    if (!search && !(status && status.ran)) return null;
+    var results = [], seen = {};
+    var candidates = search && Array.isArray(search.results) ? search.results.slice(0, 20) : [];
+    if (search && search.source && search.source.url) candidates.unshift({ link: search.source.url, title: search.source.title });
+    candidates.forEach(function (item) {
+      if (!item || results.length >= 5) return;
+      try {
+        var u = new URL(item.link || item.url);
+        if (!/^https?:$/.test(u.protocol) || u.username || u.password || seen[u.href]) return;
+        seen[u.href] = true;
+        results.push({ link: u.href, title: String(item.title || u.hostname).slice(0, 200) });
+      } catch (e) {}
+    });
+    return { results: results, failed: !!(status && status.ran && !status.ok) };
+  }
+
+  function renderSearch(search) {
+    if (!search) return '';
+    if (!search.results.length) return '<p class="search-note">' + (search.failed ? 'Web search was unavailable for this answer.' : 'Web search returned no source links.') + '</p>';
+    return '<section class="search-sources" aria-label="Web sources"><p class="search-label">Web sources</p><ul>' + search.results.map(function (item) { return '<li>' + anchor(item.link, item.title) + '</li>'; }).join('') + '</ul></section>';
+  }
+
+  function addNovaMessage(text, search) {
     var row = document.createElement('div');
     row.className = 'msg msg-nova';
     var bubble = document.createElement('div');
     bubble.className = 'bubble rich';
-    bubble.innerHTML = '<span class="sr-only">Nova said: </span>' + renderRich(text);
+    // Revalidate saved source links as well as live results before rendering.
+    search = search ? normalizeSearch(search, { ran: true, ok: !search.failed }) : null;
+    bubble.innerHTML = '<span class="sr-only">Nova said: </span>' + renderRich(text) + renderSearch(search);
     row.appendChild(brainAvatar()); row.appendChild(bubble);
     el.messages.appendChild(row);
     updateEmptyState();
@@ -772,7 +802,7 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
   function renderTranscript() {
     el.messages.innerHTML = '';
     transcript.forEach(function (m) {
-      if (m.role === 'user') addUserMessage(m.text, (m.files || []).map(function (n) { return { name: n }; })); else addNovaMessage(m.text);
+      if (m.role === 'user') addUserMessage(m.text, (m.files || []).map(function (n) { return { name: n }; })); else addNovaMessage(m.text, m.search);
     });
     updateEmptyState();
     scrollToBottom(true);
@@ -849,7 +879,7 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
         try { data = JSON.parse(body); } catch (e) { return { kind: 'bad' }; }
         if (!data || typeof data.reply !== 'string' || !data.reply.trim()) return { kind: 'bad' };
         if (SIGN_IN_AGAIN_RE.test(data.reply)) return { kind: 'auth-retry', reply: data.reply };
-        return { kind: 'ok', reply: data.reply, sessionId: data.session_id };
+        return { kind: 'ok', reply: data.reply, sessionId: data.session_id, search: normalizeSearch(data.tools && data.tools.search, data.web_search) };
       });
     }).catch(function (err) {
       if (flight.cancelled) return { kind: 'cancelled' };
@@ -910,8 +940,8 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
           if (typeof r.sessionId === 'string' && SESSION_ID_RE.test(r.sessionId) && r.sessionId !== sessionId) {
             sessionId = r.sessionId;
           }
-          addNovaMessage(r.reply);
-          transcript.push({ role: 'nova', text: r.reply, ts: Date.now() });
+          addNovaMessage(r.reply, r.search);
+          transcript.push({ role: 'nova', text: r.reply, search: r.search, ts: Date.now() });
           saveConversation();
           break;
         case 'auth':
