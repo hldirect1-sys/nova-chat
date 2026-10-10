@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#03050d">
 <meta name="referrer" content="strict-origin-when-cross-origin">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src https://cwlktrvvappvwdmhefxo.supabase.co wss://cwlktrvvappvwdmhefxo.supabase.co; base-uri 'none'; form-action 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src https://cwlktrvvappvwdmhefxo.supabase.co wss://cwlktrvvappvwdmhefxo.supabase.co; base-uri 'none'; form-action 'self'; object-src 'none'">
 <title>Nova</title>
 <meta name="description" content="Nova, your personal AI assistant.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f1424'/%3E%3Cg fill='none' stroke='%23ff4f9a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' transform='translate(4 4)'%3E%3Cpath d='M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z'/%3E%3Cpath d='M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z'/%3E%3Cpath d='M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4'/%3E%3C/g%3E%3C/svg%3E">
@@ -211,6 +211,18 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
 .send-btn:hover:not(:disabled) { background: #5558e8; }
 .send-btn:disabled { opacity: .4; cursor: not-allowed; }
 .pw-key { display: none; }
+.attach-btn { flex: none; width: 40px; height: 40px; border-radius: 11px; border: 0; display: grid; place-items: center; background: transparent; color: var(--muted); cursor: pointer; }
+.attach-btn:hover:not(:disabled) { color: var(--text); background: var(--panel-2); }
+.attach-btn:disabled { opacity: .4; cursor: not-allowed; }
+.chips { max-width: 780px; margin: 0 auto 8px; display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: flex; align-items: center; gap: 8px; max-width: 100%; padding: 6px 6px 6px 8px; border-radius: 12px; border: 1px solid var(--border-strong); background: var(--panel); font-size: 13px; color: var(--body); }
+.chip img { width: 36px; height: 36px; object-fit: cover; border-radius: 8px; flex: none; }
+.chip .chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
+.chip button { flex: none; width: 26px; height: 26px; border-radius: 8px; border: 0; background: transparent; color: var(--muted); cursor: pointer; display: grid; place-items: center; }
+.chip button:hover { color: var(--text); background: var(--panel-2); }
+.msg-user .att-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.msg-user .att-row img { max-width: 160px; max-height: 160px; border-radius: 10px; display: block; }
+.msg-user .att-file { display: inline-block; padding: 4px 8px; border-radius: 8px; background: rgba(7,9,20,.15); font-size: 13px; }
 .hint { max-width: 780px; margin: 6px auto 0; font-size: 12px; color: #6f7a9c; text-align: center; }
 
 @media (max-width: 720px) {
@@ -279,6 +291,12 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
   <symbol id="i-retry" viewBox="0 0 24 24">
     <path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/>
     <path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M8 16H3v5"/>
+  </symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24">
+    <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+  </symbol>
+  <symbol id="i-x" viewBox="0 0 24 24">
+    <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
   </symbol>
   <symbol id="i-alert" viewBox="0 0 24 24">
     <circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>
@@ -377,7 +395,12 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
   </main>
 
   <footer class="composer-wrap">
+    <div id="chips" class="chips" aria-live="polite" hidden></div>
     <form id="composer" class="composer" novalidate>
+      <button id="attachBtn" class="attach-btn" type="button" aria-label="Attach a picture or PDF" title="Attach a picture or PDF">
+        <svg class="icon" aria-hidden="true"><use href="#i-clip"/></svg>
+      </button>
+      <input id="fileInput" type="file" accept="image/*,application/pdf" multiple hidden>
       <label for="input" class="sr-only">Message Nova</label>
       <textarea id="input" rows="1" placeholder="Message Nova…" autocomplete="off" aria-describedby="composerHint"></textarea>
       <button id="sendBtn" class="send-btn" type="submit" aria-label="Send message" disabled>
@@ -439,7 +462,8 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
     newChatBtn: $('newChatBtn'), signOutBtn: $('signOutBtn'),
     forgotBtn: $('forgotBtn'), setPwBtn: $('setPwBtn'), pwDialog: $('pwDialog'), pwForm: $('pwForm'),
     pwNew: $('pwNew'), pwConfirm: $('pwConfirm'), pwNotice: $('pwNotice'), pwSave: $('pwSave'),
-    pwCancel: $('pwCancel'), pwTitle: $('pwTitle'), pwSub: $('pwSub')
+    pwCancel: $('pwCancel'), pwTitle: $('pwTitle'), pwSub: $('pwSub'),
+    attachBtn: $('attachBtn'), fileInput: $('fileInput'), chips: $('chips')
   };
   var starterBtns = Array.prototype.slice.call(document.querySelectorAll('.starter'));
 
@@ -464,6 +488,8 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
   var pendingDraft = null;      // {userId, text}: message to restore after forced re-sign-in
   var typingRow = null;
   var typingTimers = [];
+  var pending = [];             // attachments waiting to be sent: {id, name, type, data (base64), preview}
+  var MAX_FILES = 4, MAX_IMAGE_EDGE = 2000, MAX_PDF_BYTES = 6000000;
 
   function storageKey() { return 'nova.chat.v1:' + (currentUser ? currentUser.id : 'anon'); }
 
@@ -487,7 +513,7 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
           sessionId = data.sessionId;
           if (Array.isArray(data.messages)) {
             transcript = data.messages.filter(function (m) {
-              return m && (m.role === 'user' || m.role === 'nova') && typeof m.text === 'string';
+              return m && (m.role === 'user' || m.role === 'nova') && typeof m.text === 'string' && (m.text || (m.files && m.files.length));
             });
           }
         }
@@ -638,14 +664,22 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
     el.empty.hidden = el.messages.children.length > 0;
   }
 
-  function addUserMessage(text) {
+  function addUserMessage(text, files) {
     var row = document.createElement('div');
     row.className = 'msg msg-user';
     var bubble = document.createElement('div');
     bubble.className = 'bubble';
     var sr = document.createElement('span'); sr.className = 'sr-only'; sr.textContent = 'You said: ';
     bubble.appendChild(sr);
-    bubble.appendChild(document.createTextNode(text));
+    if (files && files.length) {
+      var attRow = document.createElement('div'); attRow.className = 'att-row';
+      files.forEach(function (f) {
+        if (f.preview) { var im = document.createElement('img'); im.src = f.preview; im.alt = f.name || 'Attached picture'; attRow.appendChild(im); }
+        else { var sp = document.createElement('span'); sp.className = 'att-file'; sp.textContent = '📎 ' + (f.name || 'file'); attRow.appendChild(sp); }
+      });
+      bubble.appendChild(attRow);
+    }
+    if (text) bubble.appendChild(document.createTextNode(text));
     var av = document.createElement('div');
     av.className = 'avatar'; av.setAttribute('aria-hidden', 'true'); av.textContent = userInitial();
     row.appendChild(bubble); row.appendChild(av);
@@ -666,7 +700,7 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
     return row;
   }
 
-  function addErrorMessage(text, retryText) {
+  function addErrorMessage(text, retryText, retryFiles) {
     var row = document.createElement('div');
     row.className = 'msg msg-error';
     row.setAttribute('role', 'alert');
@@ -685,7 +719,7 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
       btn.addEventListener('click', function () {
         if (busy) return;
         row.remove();
-        sendMessage(retryText, { retry: true });
+        sendMessage(retryText, { retry: true, files: retryFiles });
       });
       actions.appendChild(btn);
       bubble.appendChild(actions);
@@ -722,7 +756,7 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
   function renderTranscript() {
     el.messages.innerHTML = '';
     transcript.forEach(function (m) {
-      if (m.role === 'user') addUserMessage(m.text); else addNovaMessage(m.text);
+      if (m.role === 'user') addUserMessage(m.text, (m.files || []).map(function (n) { return { name: n }; })); else addNovaMessage(m.text);
     });
     updateEmptyState();
     scrollToBottom(true);
@@ -735,11 +769,12 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
     busy = b;
     el.messages.setAttribute('aria-busy', b ? 'true' : 'false');
     starterBtns.forEach(function (s) { s.disabled = b; });
+    el.attachBtn.disabled = b;
     Array.prototype.forEach.call(el.messages.querySelectorAll('.retry-btn'), function (r) { r.disabled = b; });
     updateSendButton();
   }
   function updateSendButton() {
-    el.sendBtn.disabled = busy || !el.input.value.trim();
+    el.sendBtn.disabled = busy || (!el.input.value.trim() && !pending.length);
   }
   function autoGrow() {
     el.input.style.height = 'auto';
@@ -774,7 +809,7 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
   // Resolves to one of:
   //  {kind:'ok', reply, sessionId?} | {kind:'auth'} | {kind:'network'} | {kind:'timeout'}
   //  {kind:'http', status} | {kind:'bad'} | {kind:'cancelled'}
-  function postChat(text, session, flight) {
+  function postChat(text, session, flight, files) {
     var controller = new AbortController();
     flight.controller = controller;
     var timedOut = false;
@@ -786,7 +821,9 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
         'apikey': SUPABASE_KEY,
         'content-type': 'application/json'
       },
-      body: JSON.stringify({ message: text, session_id: sessionId }),
+      body: JSON.stringify(files && files.length
+        ? { message: text, session_id: sessionId, files: files.map(function (f) { return { name: f.name, type: f.type, data: f.data }; }) }
+        : { message: text, session_id: sessionId }),
       signal: controller.signal
     }).then(function (res) {
       if (res.status === 401) return { kind: 'auth-retry' };
@@ -810,17 +847,17 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
     });
   }
 
-  function callNova(text, flight) {
+  function callNova(text, flight, files) {
     return getFreshSession(false).then(function (session) {
       if (flight.cancelled) return { kind: 'cancelled' };
       if (!session) return { kind: 'auth' };
-      return postChat(text, session, flight).then(function (r) {
+      return postChat(text, session, flight, files).then(function (r) {
         if (r.kind !== 'auth-retry') return r;
         // "Sign in again..." or 401: refresh once and retry.
         return getFreshSession(true).then(function (fresh) {
           if (flight.cancelled) return { kind: 'cancelled' };
           if (!fresh) return { kind: 'auth' };
-          return postChat(text, fresh, flight).then(function (r2) {
+          return postChat(text, fresh, flight, files).then(function (r2) {
             return r2.kind === 'auth-retry' ? { kind: 'auth' } : r2;
           });
         });
@@ -831,14 +868,17 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
   function sendMessage(rawText, opts) {
     opts = opts || {};
     var text = String(rawText == null ? '' : rawText).trim();
-    if (!text || busy || !currentUser) return Promise.resolve();
+    var files = opts.files || (opts.fromComposer ? pending.slice() : []);
+    if ((!text && !files.length) || busy || !currentUser) return Promise.resolve();
     var convId = sessionId;
 
     if (!opts.retry) {
-      addUserMessage(text);
-      transcript.push({ role: 'user', text: text, ts: Date.now() });
+      addUserMessage(text, files);
+      var entry = { role: 'user', text: text, ts: Date.now() };
+      if (files.length) entry.files = files.map(function (f) { return f.name; });
+      transcript.push(entry);
       saveConversation();
-      if (opts.fromComposer) { el.input.value = ''; autoGrow(); }
+      if (opts.fromComposer) { el.input.value = ''; autoGrow(); pending = []; renderChips(); }
     }
     setBusy(true);
     showTyping();
@@ -846,7 +886,7 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
     var flight = { controller: null, cancelled: false };
     inflight = flight;
 
-    return callNova(text, flight).then(function (r) {
+    return callNova(text, flight, files).then(function (r) {
       if (flight.cancelled || r.kind === 'cancelled' || convId !== sessionId) return;
       hideTyping();
       switch (r.kind) {
@@ -862,28 +902,29 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
           // Put the unsent message back in the composer after re-sign-in (not in history twice).
           var lastMsg = transcript[transcript.length - 1];
           if (lastMsg && lastMsg.role === 'user' && lastMsg.text === text) { transcript.pop(); saveConversation(); }
+          if (files.length) { pending = files.slice(); renderChips(); }
           pendingDraft = { userId: currentUser.id, text: text };
           forceReauth();
           break;
         case 'network':
           addErrorMessage(navigator.onLine === false
             ? "I'm having trouble reaching the server right now. You appear to be offline."
-            : "I'm having trouble reaching the server right now.", text);
+            : "I'm having trouble reaching the server right now.", text, files);
           break;
         case 'timeout':
-          addErrorMessage('Nova did not respond in time (no reply after ' + Math.round(REQUEST_TIMEOUT_MS / 1000) + ' seconds). You can try again.', text);
+          addErrorMessage('Nova did not respond in time (no reply after ' + Math.round(REQUEST_TIMEOUT_MS / 1000) + ' seconds). You can try again.', text, files);
           break;
         case 'http':
-          addErrorMessage('The server returned an error (HTTP ' + r.status + '). Please try again.', text);
+          addErrorMessage('The server returned an error (HTTP ' + r.status + '). Please try again.', text, files);
           break;
         default:
-          addErrorMessage('The server sent a response I could not read. Please try again.', text);
+          addErrorMessage('The server sent a response I could not read. Please try again.', text, files);
       }
       scrollToBottom(true);
     }).catch(function () {
       if (flight.cancelled) return;
       hideTyping();
-      addErrorMessage('Something went wrong sending that message.', text);
+      addErrorMessage('Something went wrong sending that message.', text, files);
     }).then(function () {
       if (inflight === flight) { inflight = null; setBusy(false); }
       if (!el.chat.hidden && !('ontouchstart' in window)) el.input.focus();
@@ -1044,7 +1085,7 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
     saveConversation();
     el.messages.innerHTML = '';
     updateEmptyState();
-    el.input.value = ''; autoGrow(); updateSendButton();
+    el.input.value = ''; autoGrow(); pending = []; renderChips();
     el.scroller.scrollTop = 0;
     el.input.focus();
   });
@@ -1053,12 +1094,86 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
     cancelInflight();
     // Clear this user's local transcript on explicit sign-out (shared-device privacy).
     if (currentUser) store.del(storageKey());
-    transcript = []; sessionId = null; pendingDraft = null;
+    transcript = []; sessionId = null; pendingDraft = null; pending = []; renderChips();
     el.messages.innerHTML = '';
     el.input.value = ''; autoGrow();
     el.signOutBtn.disabled = true;
     var done = function () { el.signOutBtn.disabled = false; showAuth('You have been signed out.', 'success'); };
     sb.auth.signOut({ scope: 'local' }).then(done, done);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Attachments: pictures are shrunk on the device, then sent with the message
+  // ---------------------------------------------------------------------------
+  function blobToBase64(blob) {
+    return new Promise(function (resolve, reject) {
+      var fr = new FileReader();
+      fr.onload = function () { var s = String(fr.result || ''); resolve(s.slice(s.indexOf(',') + 1)); };
+      fr.onerror = function () { reject(fr.error); };
+      fr.readAsDataURL(blob);
+    });
+  }
+  function shrinkImage(file) {
+    return new Promise(function (resolve) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        var w = img.naturalWidth, h = img.naturalHeight, scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(w, h));
+        if (scale === 1 && file.size < 1500000 && /^image\/(jpeg|png|webp)$/.test(file.type)) { URL.revokeObjectURL(url); resolve({ blob: file, type: file.type }); return; }
+        var c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(w * scale)); c.height = Math.max(1, Math.round(h * scale));
+        var ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        c.toBlob(function (b) { resolve(b ? { blob: b, type: 'image/jpeg' } : { blob: file, type: file.type }); }, 'image/jpeg', 0.85);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
+    });
+  }
+  function renderChips() {
+    el.chips.innerHTML = '';
+    el.chips.hidden = !pending.length;
+    pending.forEach(function (f) {
+      var chip = document.createElement('div'); chip.className = 'chip';
+      if (f.preview) { var im = document.createElement('img'); im.src = f.preview; im.alt = ''; chip.appendChild(im); }
+      var nm = document.createElement('span'); nm.className = 'chip-name'; nm.textContent = (f.preview ? '' : '📎 ') + f.name; chip.appendChild(nm);
+      var x = document.createElement('button'); x.type = 'button'; x.setAttribute('aria-label', 'Remove ' + f.name);
+      x.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#i-x"/></svg>';
+      x.addEventListener('click', function () { pending = pending.filter(function (p) { return p !== f; }); renderChips(); });
+      chip.appendChild(x);
+      el.chips.appendChild(chip);
+    });
+    updateSendButton();
+  }
+  function addFiles(list) {
+    var files = Array.prototype.slice.call(list || []);
+    var room = MAX_FILES - pending.length;
+    if (room <= 0) { addErrorMessage('You can attach up to ' + MAX_FILES + ' files per message.', null); return; }
+    files.slice(0, room).forEach(function (file) {
+      var isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+      var isImg = /^image\//.test(file.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name);
+      if (!isPdf && !isImg) { addErrorMessage(file.name + ' is not a picture or PDF.', null); return; }
+      if (isPdf) {
+        if (file.size > MAX_PDF_BYTES) { addErrorMessage(file.name + ' is too large. PDFs must be under 6 MB.', null); return; }
+        blobToBase64(file).then(function (data) { pending.push({ name: file.name, type: 'application/pdf', data: data, preview: null }); renderChips(); });
+        return;
+      }
+      shrinkImage(file).then(function (r) {
+        if (!r) { addErrorMessage('Could not open ' + file.name + '. Try a JPG or PNG.', null); return; }
+        return blobToBase64(r.blob).then(function (data) {
+          var name = r.type === 'image/jpeg' ? file.name.replace(/\.(heic|heif|png|webp)$/i, '.jpg') : file.name;
+          pending.push({ name: name, type: r.type, data: data, preview: URL.createObjectURL(r.blob) });
+          renderChips();
+        });
+      });
+    });
+    if (files.length > room) addErrorMessage('Only the first ' + room + ' file(s) were added (max ' + MAX_FILES + ').', null);
+  }
+  el.attachBtn.addEventListener('click', function () { el.fileInput.click(); });
+  el.fileInput.addEventListener('change', function () { addFiles(el.fileInput.files); el.fileInput.value = ''; });
+  el.input.addEventListener('paste', function (e) {
+    var items = (e.clipboardData && e.clipboardData.files) || [];
+    if (items.length) { e.preventDefault(); addFiles(items); }
   });
 
   // ---------------------------------------------------------------------------
