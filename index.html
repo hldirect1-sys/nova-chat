@@ -121,6 +121,13 @@ button { font: inherit; }
 .notice.error { border-color: var(--danger-border); background: var(--danger-bg); color: #ffd0d0; }
 .notice.success { border-color: rgba(126,226,184,.35); background: rgba(126,226,184,.07); color: #c9f5e2; }
 .auth-foot { margin: 18px 0 0; text-align: center; font-size: 13px; color: var(--muted); }
+.link-btn { background: none; border: 0; padding: 4px; margin: 10px auto 0; display: block; color: var(--accent-2); font-size: 14px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.link-btn:hover { color: #c6c8ff; }
+dialog.pw { width: min(400px, calc(100vw - 32px)); background: var(--panel); color: var(--body); border: 1px solid var(--border); border-radius: 20px; padding: 26px 22px 22px; }
+dialog.pw::backdrop { background: rgba(3,5,13,.75); }
+dialog.pw h2 { font-size: 20px; margin-bottom: 6px; }
+dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
+.pw-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
 
 /* App shell */
 .app { height: 100dvh; display: flex; flex-direction: column; min-width: 0; }
@@ -203,6 +210,7 @@ button { font: inherit; }
 }
 .send-btn:hover:not(:disabled) { background: #5558e8; }
 .send-btn:disabled { opacity: .4; cursor: not-allowed; }
+.pw-key { display: none; }
 .hint { max-width: 780px; margin: 6px auto 0; font-size: 12px; color: #6f7a9c; text-align: center; }
 
 @media (max-width: 720px) {
@@ -217,6 +225,7 @@ button { font: inherit; }
 }
 @media (max-width: 420px) {
   .btn-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .pw-key { display: inline !important; }
   .topbar .btn { padding: 8px 10px; }
   .bubble { max-width: 88%; }
   .msg-nova .avatar, .msg-error .avatar { width: 28px; height: 28px; }
@@ -306,6 +315,7 @@ button { font: inherit; }
       </div>
       <button id="passwordBtn" class="btn btn-primary btn-block" type="submit">Sign in</button>
     </form>
+    <button id="forgotBtn" class="link-btn" type="button">Forgot password? / Set one</button>
     <div class="divider">or</div>
     <button id="magicBtn" class="btn btn-block" type="button">Email me a sign-in link</button>
     <p class="auth-foot">The link signs you in on this device. Only confirmed accounts can sign in.</p>
@@ -322,6 +332,9 @@ button { font: inherit; }
     <nav class="topbar-actions" aria-label="Chat actions">
       <button id="newChatBtn" class="btn" type="button" aria-label="New chat" title="New chat">
         <svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg><span class="btn-label">New chat</span>
+      </button>
+      <button id="setPwBtn" class="btn btn-ghost" type="button" aria-label="Set password" title="Set password">
+        <span class="btn-label">Set password</span><span aria-hidden="true" class="pw-key">🔑</span>
       </button>
       <button id="signOutBtn" class="btn btn-ghost" type="button" aria-label="Sign out" title="Sign out">
         <svg class="icon" aria-hidden="true"><use href="#i-logout"/></svg><span class="btn-label">Sign out</span>
@@ -375,6 +388,27 @@ button { font: inherit; }
   </footer>
 </div>
 
+<!-- Set / reset password -->
+<dialog id="pwDialog" class="pw" aria-labelledby="pwTitle">
+  <form id="pwForm" novalidate>
+    <h2 id="pwTitle">Set your password</h2>
+    <p class="sub2" id="pwSub">Use it to sign in with your email and password from now on.</p>
+    <div id="pwNotice" class="notice" role="status" aria-live="polite" hidden></div>
+    <div class="field">
+      <label for="pwNew">New password</label>
+      <input id="pwNew" type="password" autocomplete="new-password" minlength="8" required>
+    </div>
+    <div class="field">
+      <label for="pwConfirm">Confirm password</label>
+      <input id="pwConfirm" type="password" autocomplete="new-password" minlength="8" required>
+    </div>
+    <div class="pw-actions">
+      <button id="pwCancel" class="btn" type="button">Cancel</button>
+      <button id="pwSave" class="btn btn-primary" type="submit">Save password</button>
+    </div>
+  </form>
+</dialog>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function () {
@@ -402,7 +436,10 @@ button { font: inherit; }
     authNotice: $('authNotice'), passwordBtn: $('passwordBtn'), magicBtn: $('magicBtn'),
     chat: $('chatView'), scroller: $('scroller'), empty: $('emptyState'), messages: $('messages'),
     composer: $('composer'), input: $('input'), sendBtn: $('sendBtn'),
-    newChatBtn: $('newChatBtn'), signOutBtn: $('signOutBtn')
+    newChatBtn: $('newChatBtn'), signOutBtn: $('signOutBtn'),
+    forgotBtn: $('forgotBtn'), setPwBtn: $('setPwBtn'), pwDialog: $('pwDialog'), pwForm: $('pwForm'),
+    pwNew: $('pwNew'), pwConfirm: $('pwConfirm'), pwNotice: $('pwNotice'), pwSave: $('pwSave'),
+    pwCancel: $('pwCancel'), pwTitle: $('pwTitle'), pwSub: $('pwSub')
   };
   var starterBtns = Array.prototype.slice.call(document.querySelectorAll('.starter'));
 
@@ -1025,6 +1062,50 @@ button { font: inherit; }
   });
 
   // ---------------------------------------------------------------------------
+  // Password: set while signed in, or reset by email
+  // ---------------------------------------------------------------------------
+  function pwNotice(text, kind) {
+    if (!text) { el.pwNotice.hidden = true; el.pwNotice.textContent = ''; return; }
+    el.pwNotice.className = 'notice' + (kind ? ' ' + kind : '');
+    el.pwNotice.textContent = text; el.pwNotice.hidden = false;
+  }
+  function openPwDialog(recovery) {
+    el.pwTitle.textContent = recovery ? 'Choose a new password' : 'Set your password';
+    el.pwSub.textContent = recovery ? 'You opened a password link. Pick a new password to finish.' : 'Use it to sign in with your email and password from now on.';
+    el.pwNew.value = ''; el.pwConfirm.value = ''; pwNotice('');
+    el.pwSave.disabled = false;
+    try { el.pwDialog.showModal(); } catch (e) { el.pwDialog.setAttribute('open', ''); }
+    setTimeout(function () { el.pwNew.focus(); }, 0);
+  }
+  function closePwDialog() { try { el.pwDialog.close(); } catch (e) { el.pwDialog.removeAttribute('open'); } }
+  el.setPwBtn.addEventListener('click', function () { openPwDialog(false); });
+  el.pwCancel.addEventListener('click', closePwDialog);
+  el.pwForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var a = el.pwNew.value, b = el.pwConfirm.value;
+    if (a.length < 8) { pwNotice('Use at least 8 characters.', 'error'); el.pwNew.focus(); return; }
+    if (a !== b) { pwNotice('The two passwords do not match.', 'error'); el.pwConfirm.focus(); return; }
+    el.pwSave.disabled = true; pwNotice('Saving…');
+    sb.auth.updateUser({ password: a }).then(function (res) {
+      el.pwSave.disabled = false;
+      if (res.error) { pwNotice(friendlyAuthError(res.error), 'error'); return; }
+      el.pwNew.value = ''; el.pwConfirm.value = '';
+      pwNotice('Password saved. Next time, sign in with your email and this password.', 'success');
+      setTimeout(closePwDialog, 1800);
+    }, function (err) { el.pwSave.disabled = false; pwNotice(friendlyAuthError(err), 'error'); });
+  });
+  el.forgotBtn.addEventListener('click', function () {
+    var email = el.authEmail.value.trim();
+    if (!validEmail(email)) { setAuthNotice('Enter your email address above first.', 'error'); el.authEmail.focus(); return; }
+    setAuthBusy(true); setAuthNotice('Sending password link…');
+    sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname }).then(function (res) {
+      setAuthBusy(false);
+      if (res.error) { setAuthNotice(friendlyAuthError(res.error), 'error'); return; }
+      setAuthNotice('Check your inbox. Open the link on this device to choose your password.', 'success');
+    }, function (err) { setAuthBusy(false); setAuthNotice(friendlyAuthError(err), 'error'); });
+  });
+
+  // ---------------------------------------------------------------------------
   // Boot
   // ---------------------------------------------------------------------------
   function boot() {
@@ -1044,6 +1125,7 @@ button { font: inherit; }
     // Defer work out of the callback: calling other auth methods inside it can deadlock supabase-js.
     sb.auth.onAuthStateChange(function (event, session) {
       setTimeout(function () {
+        if (event === 'PASSWORD_RECOVERY') { applySession(session); if (session && session.user) openPwDialog(true); return; }
         if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
           if (session && session.user && currentUser) currentUser = session.user;
           return;
