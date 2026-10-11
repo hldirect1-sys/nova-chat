@@ -136,6 +136,28 @@ dialog.pw h2 { font-size: 20px; margin-bottom: 6px; }
 dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
 .pw-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
 
+/* Specialist navigation */
+.workspace { flex:1; display:flex; min-height:0; }
+.brain-sidebar { width:216px; flex:none; padding:24px 14px; border-right:1px solid var(--border); background:var(--panel); }
+.brain-sidebar h2 { margin:0 10px 14px; font-size:11px; text-transform:uppercase; letter-spacing:.13em; color:var(--muted); }
+.brain-choice { display:flex; align-items:center; gap:12px; width:100%; text-align:left; padding:12px 10px; margin-bottom:6px; border:1px solid transparent; border-radius:12px; background:transparent; color:var(--body); cursor:pointer; font:inherit; }
+.brain-choice:hover { background:var(--panel-hover); }
+.brain-choice[aria-pressed="true"] { background:var(--accent-soft); border-color:rgba(124,127,242,.38); color:var(--text); }
+.brain-choice .icon { color:var(--accent-2); flex:none; }
+.brain-choice strong { display:block; font-size:14px; font-weight:600; }
+.brain-choice small { display:block; color:var(--muted); font-size:11px; margin-top:2px; }
+.brain-sidebar .brain-note { margin:18px 10px; color:var(--muted); font-size:12px; line-height:1.5; }
+.chat-pane { display:flex; flex-direction:column; flex:1; min-width:0; min-height:0; }
+.active-brain-label { color:var(--muted); font-size:12px; border-left:1px solid var(--border); padding-left:10px; margin-left:2px; }
+@media(max-width:700px) {
+ .workspace { flex-direction:column; }
+ .brain-sidebar { width:100%; padding:10px 12px; border-right:0; border-bottom:1px solid var(--border); }
+ .brain-sidebar h2,.brain-note,.brain-choice small { display:none; }
+ .brain-nav { display:flex; gap:6px; }
+ .brain-choice { margin:0; padding:10px 8px; justify-content:center; gap:7px; }
+ .brain-choice strong { font-size:12px; }
+ .active-brain-label { display:none; }
+}
 /* App shell */
 .app { height: 100dvh; display: flex; flex-direction: column; min-width: 0; }
 .topbar {
@@ -358,7 +380,7 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
   <header class="topbar">
     <div class="brand">
       <div class="brain-tile sm" aria-hidden="true"><svg class="icon"><use href="#i-brain"/></svg></div>
-      <span class="brand-name">Nova</span>
+      <span class="brand-name">Nova</span><span id="activeBrainLabel" class="active-brain-label">General assistant</span>
     </div>
     <nav class="topbar-actions" aria-label="Chat actions">
       <button id="newChatBtn" class="btn" type="button" aria-label="New chat" title="New chat">
@@ -373,6 +395,17 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
     </nav>
   </header>
 
+  <div class="workspace">
+    <aside class="brain-sidebar" aria-label="Choose a brain">
+      <h2>Brains</h2>
+      <nav class="brain-nav" aria-label="Specialist brains">
+        <button type="button" class="brain-choice" data-brain="nova" aria-pressed="true"><svg class="icon" aria-hidden="true"><use href="#i-brain"/></svg><span><strong>Nova</strong><small>Your general assistant</small></span></button>
+        <button type="button" class="brain-choice" data-brain="tax" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-book"/></svg><span><strong>Tax Brain</strong><small>Advice, planning &amp; reports</small></span></button>
+        <button type="button" class="brain-choice" data-brain="travel" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-plane"/></svg><span><strong>Travel Brain</strong><small>Flights, stays &amp; discovery</small></span></button>
+      </nav>
+      <p class="brain-note">Choose a specialist.<br>Each brain keeps its own conversations.</p>
+    </aside>
+    <div class="chat-pane">
   <main id="scroller" class="scroller">
     <div class="inner" id="inner">
       <section id="emptyState" class="empty" aria-labelledby="emptyHeading">
@@ -422,6 +455,8 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
     </form>
     <p id="composerHint" class="hint">Enter to send · Shift+Enter for a new line</p>
   </footer>
+    </div>
+  </div>
 </div>
 
 <!-- Set / reset password -->
@@ -495,6 +530,8 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
   var sb = null;
   var currentUser = null;
   var sessionId = null;
+  var activeBrain = "nova";
+  var brainNames = { nova: "Nova", tax: "Tax Brain", travel: "Travel Brain" };
   var transcript = [];          // [{role:'user'|'nova', text, ts}]
   var busy = false;
   var inflight = null;          // {controller, cancelled}
@@ -504,7 +541,39 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
   var pending = [];             // attachments waiting to be sent: {id, name, type, data (base64), preview}
   var MAX_FILES = 4, MAX_IMAGE_EDGE = 2000, MAX_PDF_BYTES = 6000000;
 
-  function storageKey() { return 'nova.chat.v1:' + (currentUser ? currentUser.id : 'anon'); }
+  function storageKey() { return 'nova.chat.v1:' + (currentUser ? currentUser.id : 'anon') + (activeBrain === 'nova' ? '' : ':brain_' + activeBrain); }
+
+  function updateBrainUI() {
+    var name = brainNames[activeBrain];
+    document.querySelectorAll('[data-brain]').forEach(function(btn) { btn.setAttribute('aria-pressed', btn.getAttribute('data-brain') === activeBrain ? 'true' : 'false'); });
+    $('activeBrainLabel').textContent = activeBrain === 'nova' ? 'General assistant' : name;
+    $('emptyHeading').textContent = activeBrain === 'nova' ? "Hey. I'm Nova." : name;
+    document.querySelector('#emptyState .sub').textContent = activeBrain === 'travel' ? 'Find flights, compare stays, and discover your next destination.' : activeBrain === 'tax' ? 'Tax advice and planning, with sources and preparer review.' : 'Your personal AI assistant. How can I help today?';
+    el.input.placeholder = 'Message ' + name + '…';
+    el.messages.setAttribute('aria-label', 'Conversation with ' + name);
+    el.attachBtn.hidden = activeBrain !== 'nova';
+    var prompts = activeBrain === 'travel' ? [
+      ['Flights','Compare flights for your next trip','Help me find flights. Ask me for my departure airport, destination and travel dates.'],
+      ['Hotels','Find the right place to stay','Help me choose a hotel. Ask me for destination, dates, guests and budget.'],
+      ['Explore','Discover destinations and deals','Help me discover destinations. Ask me for my home airport, dates and interests.']
+    ] : activeBrain === 'tax' ? [
+      ['Tax advice','Understand your tax question','Help me understand a tax question. Ask for the tax year and jurisdiction first.'],
+      ['Planning','Explore tax planning options','Help me with tax planning. Ask about my situation, state and tax year first.'],
+      ['Review','Organize questions for your preparer','Help me organize the information and questions I should bring to my tax preparer.']
+    ] : [
+      ['Flights','Find flights from New York to Los Angeles next Friday','Find flights from New York to Los Angeles next Friday'],
+      ['Web Research','Research the latest changes to 2026 tax brackets','Research the latest changes to 2026 tax brackets'],
+      ['Knowledge','Summarize the key clauses in a standard NDA','Summarize the key clauses in a standard NDA']
+    ];
+    starterBtns.forEach(function(btn,i) { btn.setAttribute('data-prompt',prompts[i][2]);btn.querySelector('.starter-title').textContent=prompts[i][0];btn.querySelector('.starter-desc').textContent=prompts[i][1]; });
+  }
+  function selectBrain(brain) {
+    if (!brainNames[brain] || brain === activeBrain) return;
+    saveConversation(); cancelInflight(); activeBrain = brain;
+    el.input.value=''; pendingDraft=null; pending=[]; renderChips(); autoGrow();
+    updateBrainUI(); loadConversation(); renderTranscript(); updateSendButton(); el.input.focus();
+  }
+  document.querySelectorAll('[data-brain]').forEach(function(btn) { btn.addEventListener('click',function() { selectBrain(btn.getAttribute('data-brain')); }); });
 
   function newSessionId() {
     var alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -739,7 +808,7 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
     bubble.className = 'bubble rich';
     // Revalidate saved source links as well as live results before rendering.
     search = search ? normalizeSearch(search, { ran: true, ok: !search.failed }) : null;
-    bubble.innerHTML = '<span class="sr-only">Nova said: </span>' + renderRich(text) + renderSearch(search);
+    bubble.innerHTML = '<span class="sr-only">' + brainNames[activeBrain] + ' said: </span>' + renderRich(text) + renderSearch(search);
     row.appendChild(brainAvatar()); row.appendChild(bubble);
     el.messages.appendChild(row);
     updateEmptyState();
@@ -783,7 +852,7 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
     row.id = 'typingRow';
     var bubble = document.createElement('div');
     bubble.className = 'bubble';
-    bubble.innerHTML = '<span class="typing" role="status" aria-label="Nova is typing"><span></span><span></span><span></span></span>' +
+    bubble.innerHTML = '<span class="typing" role="status" aria-label="Assistant is typing"><span></span><span></span><span></span></span>' +
       '<span class="typing-note" hidden></span>';
     row.appendChild(brainAvatar()); row.appendChild(bubble);
     el.messages.appendChild(row);
@@ -856,6 +925,7 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
   //  {kind:'ok', reply, sessionId?} | {kind:'auth'} | {kind:'network'} | {kind:'timeout'}
   //  {kind:'http', status} | {kind:'bad'} | {kind:'cancelled'}
   function postChat(text, session, flight, files) {
+    if (flight.cancelled) return Promise.resolve({kind:'cancelled'});
     var controller = new AbortController();
     flight.controller = controller;
     var timedOut = false;
@@ -868,8 +938,8 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
         'content-type': 'application/json'
       },
       body: JSON.stringify(files && files.length
-        ? { message: text, session_id: sessionId, files: files.map(function (f) { return { name: f.name, type: f.type, data: f.data }; }) }
-        : { message: text, session_id: sessionId }),
+        ? { message: text, session_id: sessionId, brain: activeBrain, files: files.map(function (f) { return { name: f.name, type: f.type, data: f.data }; }) }
+        : { message: text, session_id: sessionId, brain: activeBrain }),
       signal: controller.signal
     }).then(function (res) {
       if (res.status === 401) return { kind: 'auth-retry' };
@@ -1001,6 +1071,7 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
     var sameUser = currentUser && currentUser.id === user.id && !el.chat.hidden;
     currentUser = user;
     if (sameUser) return;
+    activeBrain = 'nova'; updateBrainUI();
     show('chat');
     loadConversation();
     renderTranscript();
@@ -1139,7 +1210,7 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
   el.signOutBtn.addEventListener('click', function () {
     cancelInflight();
     // Clear this user's local transcript on explicit sign-out (shared-device privacy).
-    if (currentUser) store.del(storageKey());
+    if (currentUser) ['nova','tax','travel'].forEach(function(brain) { store.del('nova.chat.v1:' + currentUser.id + (brain === 'nova' ? '' : ':brain_' + brain)); });
     transcript = []; sessionId = null; pendingDraft = null; pending = []; renderChips();
     el.messages.innerHTML = '';
     el.input.value = ''; autoGrow();
