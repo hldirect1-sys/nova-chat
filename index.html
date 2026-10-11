@@ -280,6 +280,23 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
 .gen-img { display: block; max-width: min(100%, 420px); height: auto; border-radius: 14px; margin: 8px 0 4px; border: 1px solid var(--border); }
 .msg-user .att-row img { max-width: 160px; max-height: 160px; border-radius: 10px; display: block; }
 .msg-user .att-file { display: inline-block; padding: 4px 8px; border-radius: 8px; background: rgba(7,9,20,.15); font-size: 13px; }
+.web-btn { flex: none; height: 40px; padding: 0 11px; border-radius: 11px; border: 1px solid var(--border-strong); background: transparent; color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.web-btn:hover:not(:disabled) { color: var(--text); background: var(--panel-2); }
+.web-btn[aria-pressed="true"] { color: #fff; background: rgba(243,173,94,.22); border-color: rgba(243,173,94,.6); }
+.web-btn:disabled { opacity: .4; cursor: not-allowed; }
+.hotel-cards { margin-top: 14px; display: grid; gap: 12px; }
+.hotel-card { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: var(--panel-2); }
+.hotel-photos { display: flex; gap: 4px; overflow-x: auto; scroll-snap-type: x mandatory; }
+.hotel-photos a { flex: none; scroll-snap-align: start; }
+.hotel-photos img { display: block; width: 180px; height: 120px; object-fit: cover; }
+.hotel-body { padding: 10px 12px; font-size: 14px; }
+.hotel-name { color: var(--text); font-family: var(--font-head); font-weight: 600; font-size: 15px; margin: 0 0 4px; }
+.hotel-meta { color: var(--muted); font-size: 13px; margin: 0 0 6px; }
+.hotel-price { color: var(--text); font-weight: 600; margin: 0 0 6px; }
+.hotel-links { display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; }
+.hotel-links a { color: #a3a6ff; }
+.hotel-reviews { margin: 8px 0 0; padding-left: 1.1em; font-size: 13px; color: var(--body); }
+.hotel-reviews li + li { margin-top: 4px; }
 .hint { max-width: 780px; margin: 6px auto 0; font-size: 12px; color: #6f7a9c; text-align: center; }
 
 @media (max-width: 720px) {
@@ -469,6 +486,7 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
         <svg class="icon" aria-hidden="true"><use href="#i-clip"/></svg>
       </button>
       <input id="fileInput" type="file" accept="image/*,application/pdf" multiple hidden>
+      <button id="webBtn" class="web-btn" type="button" aria-pressed="false" title="Answer with a fresh Google search and show sources" hidden>Search web</button>
       <label for="input" class="sr-only">Message Nova</label>
       <textarea id="input" rows="1" placeholder="Message Nova…" autocomplete="off" aria-describedby="composerHint"></textarea>
       <button id="sendBtn" class="send-btn" type="submit" aria-label="Send message" disabled>
@@ -553,6 +571,9 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
   var currentUser = null;
   var sessionId = null;
   var activeBrain = "nova";
+  var webBtn = document.getElementById('webBtn');
+  var webMode = false;
+  webBtn.addEventListener('click', function () { webMode = !webMode; webBtn.setAttribute('aria-pressed', webMode ? 'true' : 'false'); });
   var brainNames = { nova: "Nova", tax: "Tax Brain", travel: "Travel Brain" };
   var transcript = [];          // [{role:'user'|'nova', text, ts}]
   var busy = false;
@@ -574,6 +595,7 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
     el.input.placeholder = 'Message ' + name + '…';
     el.messages.setAttribute('aria-label', 'Conversation with ' + name);
     el.attachBtn.hidden = activeBrain !== 'nova';
+    webBtn.hidden = activeBrain !== 'travel';
     var prompts = activeBrain === 'travel' ? [
       ['Flights','Compare flights for your next trip','Help me find flights. Ask me for my departure airport, destination and travel dates.'],
       ['Hotels','Find the right place to stay','Help me choose a hotel. Ask me for destination, dates, guests and budget.'],
@@ -823,14 +845,81 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
     return '<section class="search-sources" aria-label="Web sources"><p class="search-label">Web sources</p><ul>' + search.results.map(function (item) { return '<li>' + anchor(item.link, item.title) + '</li>'; }).join('') + '</ul></section>';
   }
 
-  function addNovaMessage(text, search) {
+  // Travel hotel cards: built from the Google Hotels evidence (prices, rating, photos, reviews, map) the Travel Brain returns.
+  var IMG_OK = /^https:\/\/[a-z0-9.-]+\.(?:bstatic\.com|googleusercontent\.com|gstatic\.com|ggpht\.com|vrbo\.com|trvl-media\.com|expedia\.com)\//i;
+  function safeUrl(u) { try { var x = new URL(String(u)); return /^https:$/.test(x.protocol) && !x.username && !x.password ? x.href : null; } catch (e) { return null; } }
+  function safeLink(u) { try { var x = new URL(String(u)); return /^https?:$/.test(x.protocol) && !x.username && !x.password ? x.href : null; } catch (e) { return null; } }
+  function firstImg(c) { for (var i = 0; i < c.length; i++) { var u = c[i] && safeUrl(c[i]); if (u && IMG_OK.test(u)) return u; } return null; }
+  function travelHotels(ev) {
+    var hotels = [], photosBy = {}, reviewsBy = {};
+    ev.forEach(function (r) {
+      if (!r || !r.result) return;
+      var tok = r.property_token || (r.result.search_parameters && r.result.search_parameters.property_token);
+      if (r.engine === 'google_hotels_photos' && tok) {
+        var list = (r.result.photos || []).slice();
+        (r.result.sections || []).forEach(function (sec) { if (sec && Array.isArray(sec.photos)) list = list.concat(sec.photos); });
+        photosBy[tok] = list.map(function (x) { return x && firstImg([x.thumbnail_url, x.thumbnail, x.image, x.photo_url, x.original_image]); });
+      }
+      if (r.engine === 'google_hotels_reviews' && tok) reviewsBy[tok] = (r.result.reviews || []).map(function (x) {
+        if (!x) return null;
+        var t = String(x.snippet || x.text || x.description || '');
+        if (!t || /^\[.*omitted\]$/.test(t)) t = (x.attributes || []).map(function (a) { return a && a.name && a.snippet ? a.name + ': ' + a.snippet : ''; }).filter(Boolean).join(' · ');
+        return { text: t.slice(0, 280), rating: x.rating, who: x.user && x.user.name || x.source || '' };
+      }).filter(function (x) { return x && x.text; }).slice(0, 3);
+    });
+    ev.forEach(function (r) {
+      if (!r || r.engine !== 'google_hotels' || !r.result || !Array.isArray(r.result.properties)) return;
+      var cur = r.result.search_parameters && r.result.search_parameters.currency || '';
+      r.result.properties.slice(0, 5).forEach(function (p) {
+        if (!p || !p.name || hotels.length >= 5) return;
+        var imgs = (photosBy[p.property_token] || []).concat((p.images || []).map(function (i) { return i && firstImg([i.original_image, i.thumbnail]); }));
+        var seen = {};
+        imgs = imgs.map(safeUrl).filter(function (u) { if (!u || !IMG_OK.test(u) || seen[u]) return false; seen[u] = true; return true; }).slice(0, 6);
+        var g = p.gps_coordinates;
+        var map = g && isFinite(g.latitude) && isFinite(g.longitude)
+          ? 'https://www.google.com/maps/search/?api=1&query=' + Number(g.latitude) + ',' + Number(g.longitude)
+          : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(p.name);
+        hotels.push({
+          name: String(p.name).slice(0, 160), link: safeLink(p.link), map: map, photos: imgs,
+          nightly: p.rate_per_night && p.rate_per_night.lowest || null,
+          total: p.total_rate && p.total_rate.lowest || null, currency: cur,
+          rating: p.overall_rating || null, reviews: p.reviews || null, stars: p.hotel_class || null,
+          guest: reviewsBy[p.property_token] || []
+        });
+      });
+    });
+    return hotels;
+  }
+  function renderHotels(hotels) {
+    if (!Array.isArray(hotels) || !hotels.length) return '';
+    return '<section class="hotel-cards" aria-label="Hotels">' + hotels.map(function (h) {
+      var link = safeLink(h.link), map = safeUrl(h.map);
+      var photos = (h.photos || []).map(safeUrl).filter(function (u) { return u && IMG_OK.test(u); });
+      var meta = [];
+      if (h.rating) meta.push('★ ' + esc(h.rating) + (h.reviews ? ' (' + esc(h.reviews) + ' reviews)' : ''));
+      if (h.stars) meta.push(esc(h.stars));
+      var price = [];
+      if (h.nightly) price.push(esc(h.nightly) + ' / night');
+      if (h.total) price.push(esc(h.total) + ' total');
+      return '<article class="hotel-card">' +
+        (photos.length ? '<div class="hotel-photos">' + photos.map(function (u) { return '<a href="' + esc(u) + '" target="_blank" rel="noopener noreferrer nofollow"><img src="' + esc(u) + '" alt="Photo of ' + esc(h.name) + '" loading="lazy" referrerpolicy="no-referrer"></a>'; }).join('') + '</div>' : '') +
+        '<div class="hotel-body"><p class="hotel-name">' + esc(h.name) + '</p>' +
+        (meta.length ? '<p class="hotel-meta">' + meta.join(' · ') + '</p>' : '') +
+        (price.length ? '<p class="hotel-price">' + price.join(' · ') + '</p>' : '') +
+        '<div class="hotel-links">' + (link ? anchor(link, 'Hotel site') : '') + (map ? anchor(map, 'Map') : '') + '</div>' +
+        ((h.guest || []).length ? '<ul class="hotel-reviews">' + h.guest.map(function (g) { return '<li>' + (g.rating ? esc(g.rating) + '★ ' : '') + '“' + esc(g.text) + '”' + (g.who ? ' — ' + esc(g.who) : '') + '</li>'; }).join('') + '</ul>' : '') +
+        '</div></article>';
+    }).join('') + '<p class="search-note">Prices and availability can change. Confirm with the hotel before booking.</p></section>';
+  }
+
+  function addNovaMessage(text, search, hotels) {
     var row = document.createElement('div');
     row.className = 'msg msg-nova';
     var bubble = document.createElement('div');
     bubble.className = 'bubble rich';
     // Revalidate saved source links as well as live results before rendering.
     search = search ? normalizeSearch(search, { ran: true, ok: !search.failed }) : null;
-    bubble.innerHTML = '<span class="sr-only">' + brainNames[activeBrain] + ' said: </span>' + renderRich(text) + renderSearch(search);
+    bubble.innerHTML = '<span class="sr-only">' + brainNames[activeBrain] + ' said: </span>' + renderRich(text) + renderHotels(hotels) + renderSearch(search);
     row.appendChild(brainAvatar()); row.appendChild(bubble);
     el.messages.appendChild(row);
     updateEmptyState();
@@ -893,7 +982,7 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
   function renderTranscript() {
     el.messages.innerHTML = '';
     transcript.forEach(function (m) {
-      if (m.role === 'user') addUserMessage(m.text, (m.files || []).map(function (n) { return { name: n }; })); else addNovaMessage(m.text, m.search);
+      if (m.role === 'user') addUserMessage(m.text, (m.files || []).map(function (n) { return { name: n }; })); else addNovaMessage(m.text, m.search, m.hotels);
     });
     updateEmptyState();
     scrollToBottom(true);
@@ -907,6 +996,7 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
     el.messages.setAttribute('aria-busy', b ? 'true' : 'false');
     starterBtns.forEach(function (s) { s.disabled = b; });
     el.attachBtn.disabled = b;
+    webBtn.disabled = b;
     Array.prototype.forEach.call(el.messages.querySelectorAll('.retry-btn'), function (r) { r.disabled = b; });
     updateSendButton();
   }
@@ -961,7 +1051,7 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
       },
       body: JSON.stringify(files && files.length
         ? { message: text, session_id: sessionId, brain: activeBrain, files: files.map(function (f) { return { name: f.name, type: f.type, data: f.data }; }) }
-        : { message: text, session_id: sessionId, brain: activeBrain }),
+        : (activeBrain === 'travel' ? { message: text, session_id: sessionId, brain: activeBrain, search_mode: webMode ? 'web' : 'auto' } : { message: text, session_id: sessionId, brain: activeBrain })),
       signal: controller.signal
     }).then(function (res) {
       if (res.status === 401) return { kind: 'auth-retry' };
@@ -971,6 +1061,13 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
         try { data = JSON.parse(body); } catch (e) { return { kind: 'bad' }; }
         if (!data || typeof data.reply !== 'string' || !data.reply.trim()) return { kind: 'bad' };
         if (SIGN_IN_AGAIN_RE.test(data.reply)) return { kind: 'auth-retry', reply: data.reply };
+        if (data.brain === 'travel') {
+          var ev = Array.isArray(data.evidence) ? data.evidence : [];
+          var web = [];
+          ev.forEach(function (r) { if (r && r.engine === 'google' && r.result && Array.isArray(r.result.organic_results)) web = web.concat(r.result.organic_results); });
+          var ranWeb = ev.some(function (r) { return r && r.engine === 'google'; });
+          return { kind: 'ok', reply: data.reply, sessionId: data.session_id, search: ranWeb ? normalizeSearch({ results: web }, { ran: true, ok: true }) : null, hotels: travelHotels(ev) };
+        }
         return { kind: 'ok', reply: data.reply, sessionId: data.session_id, search: normalizeSearch(data.tools && data.tools.search, data.web_search) };
       });
     }).catch(function (err) {
@@ -1032,8 +1129,10 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
           if (typeof r.sessionId === 'string' && SESSION_ID_RE.test(r.sessionId) && r.sessionId !== sessionId) {
             sessionId = r.sessionId;
           }
-          addNovaMessage(r.reply, r.search);
-          transcript.push({ role: 'nova', text: r.reply, search: r.search, ts: Date.now() });
+          addNovaMessage(r.reply, r.search, r.hotels);
+          var saved = { role: 'nova', text: r.reply, search: r.search, ts: Date.now() };
+          if (r.hotels && r.hotels.length) saved.hotels = r.hotels;
+          transcript.push(saved);
           saveConversation();
           break;
         case 'auth':
