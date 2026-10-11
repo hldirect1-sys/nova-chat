@@ -158,6 +158,28 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
  .brain-choice strong { font-size:12px; }
  .active-brain-label { display:none; }
 }
+
+.brains-heading { display:flex; align-items:center; gap:11px; margin:0 6px 22px; }
+.brains-heading img { width:44px; height:44px; filter:drop-shadow(0 0 12px rgba(122,108,255,.3)); }
+.brains-heading h2 { margin:0; color:var(--text); font-size:16px; letter-spacing:-.02em; text-transform:none; }
+.brains-heading p { margin:2px 0 0; font-size:10px; color:var(--muted); letter-spacing:.03em; }
+.brain-sidebar { background:radial-gradient(ellipse at 15% 0%,rgba(99,102,241,.11),transparent 55%),var(--panel); }
+.brain-badge { display:grid; place-items:center; width:36px; height:36px; flex:none; position:relative; transition:transform .18s; }
+.brain-badge img { width:36px; height:36px; }
+.brain-badge .brain-mini { position:absolute; right:-2px; bottom:-2px; width:15px; height:15px; border-radius:5px; background:#151b2e; border:1px solid rgba(255,255,255,.18); display:grid; place-items:center; }
+.brain-badge .brain-mini .icon { width:10px; height:10px; color:#c5d0ee; stroke-width:1.8; }
+.brain-choice:hover .brain-badge { transform:translateY(-1px); }
+.brain-choice[data-brain="tax"] .brain-badge img { filter:hue-rotate(230deg); }
+.brain-choice[data-brain="travel"] .brain-badge img { filter:hue-rotate(145deg); }
+.brain-choice[data-brain="tax"][aria-pressed="true"] { background:rgba(66,211,156,.09); border-color:rgba(66,211,156,.35); }
+.brain-choice[data-brain="travel"][aria-pressed="true"] { background:rgba(243,173,94,.09); border-color:rgba(243,173,94,.35); }
+@media(max-width:700px) {
+ .brains-heading { display:none; }
+ .brain-badge,.brain-badge img { width:26px; height:26px; }
+ .brain-badge .brain-mini { display:none; }
+ .brain-choice { padding:8px 6px; }
+}
+
 /* App shell */
 .app { height: 100dvh; display: flex; flex-direction: column; min-width: 0; }
 .topbar {
@@ -397,11 +419,11 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
 
   <div class="workspace">
     <aside class="brain-sidebar" aria-label="Choose a brain">
-      <h2>Brains</h2>
+      <div class="brains-heading"><img src="assets/brain-mark.svg" alt="" aria-hidden="true"><div><h2>Brains</h2><p>Focused intelligence</p></div></div>
       <nav class="brain-nav" aria-label="Specialist brains">
-        <button type="button" class="brain-choice" data-brain="nova" aria-pressed="true"><svg class="icon" aria-hidden="true"><use href="#i-brain"/></svg><span><strong>Nova</strong><small>Your general assistant</small></span></button>
-        <button type="button" class="brain-choice" data-brain="tax" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-book"/></svg><span><strong>Tax Brain</strong><small>Advice, planning &amp; reports</small></span></button>
-        <button type="button" class="brain-choice" data-brain="travel" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-plane"/></svg><span><strong>Travel Brain</strong><small>Flights, stays &amp; discovery</small></span></button>
+        <button type="button" class="brain-choice" data-brain="nova" aria-pressed="true"><span class="brain-badge" aria-hidden="true"><img src="assets/brain-mark.svg" alt=""></span><span><strong>Nova</strong><small>Your general assistant</small></span></button>
+        <button type="button" class="brain-choice" data-brain="tax" aria-pressed="false"><span class="brain-badge" aria-hidden="true"><img src="assets/brain-mark.svg" alt=""><span class="brain-mini"><svg class="icon"><use href="#i-book"/></svg></span></span><span><strong>Tax Brain</strong><small>Advice, planning &amp; reports</small></span></button>
+        <button type="button" class="brain-choice" data-brain="travel" aria-pressed="false"><span class="brain-badge" aria-hidden="true"><img src="assets/brain-mark.svg" alt=""><span class="brain-mini"><svg class="icon"><use href="#i-plane"/></svg></span></span><span><strong>Travel Brain</strong><small>Flights, stays &amp; discovery</small></span></button>
       </nav>
       <p class="brain-note">Choose a specialist.<br>Each brain keeps its own conversations.</p>
     </aside>
