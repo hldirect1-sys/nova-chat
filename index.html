@@ -926,6 +926,11 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
     return row;
   }
 
+  function friendlyError(why) {
+    if (/daily_ai_limit|daily_search_limit/.test(why)) return brainNames[activeBrain] + ' reached its daily usage limit. Please try again later.';
+    if (/provider_ai|provider_http|provider_search_failed/.test(why)) return brainNames[activeBrain] + "'s search or AI provider had a problem. Please try again.";
+    return why;
+  }
   function addErrorMessage(text, retryText, retryFiles) {
     var row = document.createElement('div');
     row.className = 'msg msg-error';
@@ -1055,7 +1060,8 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
       signal: controller.signal
     }).then(function (res) {
       if (res.status === 401) return { kind: 'auth-retry' };
-      if (!res.ok) return { kind: 'http', status: res.status };
+      // Show the server's own explanation (e.g. a daily limit) instead of a bare HTTP code.
+      if (!res.ok) return res.text().then(function (b) { var why = ''; try { var j = JSON.parse(b); why = typeof j.reply === 'string' ? j.reply : (typeof j.error === 'string' ? j.error : ''); } catch (e) {} return { kind: 'http', status: res.status, why: why.slice(0, 300) }; }, function () { return { kind: 'http', status: res.status, why: '' }; });
       return res.text().then(function (body) {
         var data;
         try { data = JSON.parse(body); } catch (e) { return { kind: 'bad' }; }
@@ -1152,7 +1158,7 @@ dialog.pw p.sub2 { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
           addErrorMessage('Nova did not respond in time (no reply after ' + Math.round(REQUEST_TIMEOUT_MS / 1000) + ' seconds). You can try again.', text, files);
           break;
         case 'http':
-          addErrorMessage('The server returned an error (HTTP ' + r.status + '). Please try again.', text, files);
+          addErrorMessage(r.why ? friendlyError(r.why) : 'The server returned an error (HTTP ' + r.status + '). Please try again.', text, files);
           break;
         default:
           addErrorMessage('The server sent a response I could not read. Please try again.', text, files);
