@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none" role="img" aria-label="Nova brain mark">
+<defs>
+ <linearGradient id="glass" x1="6" y1="4" x2="72" y2="78" gradientUnits="userSpaceOnUse"><stop stop-color="#252648"/><stop offset=".55" stop-color="#12162b"/><stop offset="1" stop-color="#0b1020"/></linearGradient>
+ <linearGradient id="edge" x1="16" y1="18" x2="62" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#5ce7ed"/><stop offset=".5" stop-color="#c5a5ff"/><stop offset="1" stop-color="#ed98d0"/></linearGradient>
+ <radialGradient id="halo"><stop stop-color="#8174ff" stop-opacity=".23"/><stop offset="1" stop-color="#8174ff" stop-opacity="0"/></radialGradient>
+ <filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation=".45" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect x="4.5" y="4.5" width="71" height="71" rx="21" fill="url(#glass)" stroke="#555581" stroke-opacity=".55"/>
+<circle cx="40" cy="39" r="31" fill="url(#halo)"/>
+<path d="M20 9H55" stroke="#d6cdff" stroke-opacity=".18" stroke-linecap="round"/>
+<g transform="translate(16 15) scale(2)" stroke="url(#edge)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)">
+ <path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/>
+ <path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/>
+ <path d="M8 7v3l-2 2v3m10-8v3l2 2v3M12 10l-3 4v4m3-8 3 4v4" opacity=".75" stroke-width=".8"/>
+</g>
+<g fill="#c6f9ff"><circle cx="32" cy="29" r="1.8"/><circle cx="48" cy="29" r="1.8"/><circle cx="28" cy="45" r="1.6"/><circle cx="52" cy="45" r="1.6"/><circle cx="34" cy="51" r="1.6"/><circle cx="46" cy="51" r="1.6"/></g>
+<circle cx="61" cy="20" r="2" fill="#8df3ef"/><circle cx="61" cy="20" r="4" stroke="#8df3ef" stroke-opacity=".18"/>
+</svg>
